@@ -1,6 +1,8 @@
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+import re
+
 
 def build_gmail_search_query(natural_question: str) -> str:
     """
@@ -87,17 +89,46 @@ def summarize_financial_data(user_query: str, email_snippets: list[str]) -> str:
 
     Instructions for your output:
     - Start with a clear heading for each category (BSE Trades, Investments, Spends).
-    - List each transaction with its date and amount.
+    - List each transaction with its date and amount in a clear format.
     - Calculate and state the 'Total Spends' at the end.
     - If a category has no items, state "No [Category] found."
     - Be precise and only use information explicitly stated in the snippets.
+    - IMPORTANT: Format the output in a clean, readable structure with clear sections.
+    - Use consistent formatting with clear separation between categories.
+    - Make it easy to read with proper spacing and organization.
     """
 
     # Generate content using the Gemini model
     response = model.generate_content(prompt)
 
-    # Return the structured text response from the model
-    return response.text.strip()
+    # Clean up the response to remove blank lines and improve formatting
+    cleaned_response = response.text.strip()
+    
+    # Remove multiple consecutive blank lines and replace with single line breaks
+    cleaned_response = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_response)
+    
+    # Remove leading/trailing whitespace from each line
+    lines = [line.strip() for line in cleaned_response.split('\n')]
+    lines = [line for line in lines if line]  # Remove empty lines
+    
+    # Rejoin with proper spacing
+    cleaned_response = '\n'.join(lines)
+    
+    return cleaned_response
+
+def get_gmail_data():
+    sample_email_snippets = [
+        "Dear Customer, your equity trade for 15 shares of Reliance Industries Ltd. (BSE: 500325) valued at ₹37,500.00 was executed on 2025-05-12. Transaction ID: RIL12345.",
+        "Your mutual fund investment of ₹7,000.00 into Axis Bluechip Fund was successfully processed on May 05, 2025. Ref: MF7890.",
+        "A debit of ₹550.00 for your Swiggy order (ID: SWG9876) was made on 2025-05-03. Enjoy your meal!",
+        "Your monthly SIP of ₹10,000.00 for ICICI Prudential Long Term Equity Fund was debited on 2025-05-07. Thank you for your continued investment.",
+        "Online purchase from Flipkart: Order FPKL6789. Amount: ₹3,200.00. Date: May 18, 2025.",
+        "Your payment of ₹250.00 to Google Pay for a taxi ride was confirmed on 2025-05-22. Ref: TXI456.",
+        "BSE delivery trade confirmation: You bought 5 shares of Tata Motors Ltd. (BSE: 500570) for ₹3,000.00 on 2025-05-25. Order#: TTM001.",
+        "Electricity Bill Payment of ₹1,800.00 processed on May 28, 2025. Account: 123456789.",
+        "Invested ₹2,500.00 in a new bond fund via your brokerage account on May 30, 2025. Confirmation ID: BND876."
+    ]
+    return sample_email_snippets
 
 #---------------------------------------------------------------------------------------------------
 
@@ -140,17 +171,7 @@ def main():
     # matching the 'gmail_search_query'. For this example, we use predefined snippets
     # that are typical of financial communications.
     print("📧 Simulating retrieval of email snippets from Gmail...")
-    sample_email_snippets = [
-        "Dear Customer, your equity trade for 15 shares of Reliance Industries Ltd. (BSE: 500325) valued at ₹37,500.00 was executed on 2025-05-12. Transaction ID: RIL12345.",
-        "Your mutual fund investment of ₹7,000.00 into Axis Bluechip Fund was successfully processed on May 05, 2025. Ref: MF7890.",
-        "A debit of ₹550.00 for your Swiggy order (ID: SWG9876) was made on 2025-05-03. Enjoy your meal!",
-        "Your monthly SIP of ₹10,000.00 for ICICI Prudential Long Term Equity Fund was debited on 2025-05-07. Thank you for your continued investment.",
-        "Online purchase from Flipkart: Order FPKL6789. Amount: ₹3,200.00. Date: May 18, 2025.",
-        "Your payment of ₹250.00 to Google Pay for a taxi ride was confirmed on 2025-05-22. Ref: TXI456.",
-        "BSE delivery trade confirmation: You bought 5 shares of Tata Motors Ltd. (BSE: 500570) for ₹3,000.00 on 2025-05-25. Order#: TTM001.",
-        "Electricity Bill Payment of ₹1,800.00 processed on May 28, 2025. Account: 123456789.",
-        "Invested ₹2,500.00 in a new bond fund via your brokerage account on May 30, 2025. Confirmation ID: BND876."
-    ]
+    sample_email_snippets = get_gmail_data()
     print(f"Retrieved {len(sample_email_snippets)} sample email snippets.\n")
 
     # Step 3: Use Gemini to summarize the financial data from the snippets
